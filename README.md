@@ -35,21 +35,22 @@ sudo ./backup.sh
 By default, archives go to `/var/backups/lab06`, and the log is `/var/log/backup.log`. Use `--dest` to pick another folder.
 
 ## Verification
+## Verification
 
-Run these after a backup:
+**1. Executing Backup Routine**
+Running the main script to generate a timestamped archive and confirm disk-space checks:
 
-```console
-$ sudo ./backup.sh --list
-DATE                       SIZE  ARCHIVE
-2026-10-26 02:15           76K  backup-20261026-021500.tar.gz
+<img width="568" height="182" alt="sudo back sh" src="https://github.com/user-attachments/assets/94848d67-d344-4df2-bbb9-cc2cb73d480c" />
 
-1 archive(s) — retention: 7 day(s)
+**2. Storage & Retention List**
+Listing active backups to verify retention policy and file sizes:
 
-$ sudo ./backup.sh --verify
-[INFO] verifying archives in /var/backups/lab06
-[OK] SHA-256 valid: backup-20261026-021500.tar.gz
-[INFO] verification complete: 1 archive(s), 0 failure(s)
-```
+<img width="525" height="136" alt="list" src="https://github.com/user-attachments/assets/cc3bd5c7-2f32-4e7f-9137-c097f14c767c" />
+
+**3. SHA-256 Integrity Check**
+Verifying archive hashes to ensure backup files are intact and uncorrupted:
+
+<img width="527" height="110" alt="verify" src="https://github.com/user-attachments/assets/27772439-6fa4-4ef6-9485-c52ced844929" />
 
 ## Key Takeaways
 
