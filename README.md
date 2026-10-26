@@ -38,19 +38,27 @@ By default, archives go to `/var/backups/lab06`, and the log is `/var/log/backup
 ## Verification
 
 **1. Executing Backup Routine**
+
 Running the main script to generate a timestamped archive and confirm disk-space checks:
 
 <img width="568" height="182" alt="sudo back sh" src="https://github.com/user-attachments/assets/94848d67-d344-4df2-bbb9-cc2cb73d480c" />
 
+
+
 **2. Storage & Retention List**
+
 Listing active backups to verify retention policy and file sizes:
 
 <img width="525" height="136" alt="list" src="https://github.com/user-attachments/assets/cc3bd5c7-2f32-4e7f-9137-c097f14c767c" />
 
+
+
 **3. SHA-256 Integrity Check**
+
 Verifying archive hashes to ensure backup files are intact and uncorrupted:
 
 <img width="527" height="110" alt="verify" src="https://github.com/user-attachments/assets/27772439-6fa4-4ef6-9485-c52ced844929" />
+
 
 ## Key Takeaways
 
