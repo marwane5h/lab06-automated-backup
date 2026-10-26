@@ -8,21 +8,17 @@
 
 ## Overview
 
-`backup.sh` gives a Linux server a backup routine that runs without an operator: it archives `/etc` and `/var/log`, checks free space first, and publishes an archive only after `tar -tzf` confirms it is readable and a SHA-256 fingerprint is recorded. Nothing half-written survives a failure — a botched run deletes its own partial file and leaves the previous backups untouched.
+`backup.sh` backs up `/etc` and `/var/log` into timestamped `.tar.gz` files. It checks free space, verifies each new archive, removes old copies, and can run daily from cron, so backups stay reliable without manual work.
 
-## Key System Features
+## Key Features
 
-| Feature | Technical Implementation | Operational Benefit |
+| Feature | How it works | Why it matters |
 |---|---|---|
-| **Atomic Writes** | `tar` writes to `<archive>.partial.$$`; only after validation is it `mv`-ed into place, with `flock` blocking concurrent runs | Readers never see a truncated archive, and an interrupted job cannot leave a file that looks like a valid backup |
-| **Pre-flight Disk Check** | `du -sk` source estimate + 50 MB margin, floored at `MIN_FREE_MB` (200 MB), compared against `df -Pk` on the destination | Refuses to start instead of filling the disk and taking the server down with the backup |
-| **Integrity Verification** | `tar -tzf` before publication, then a `.sha256` sidecar; `--verify` re-checks every archive on demand | Corruption is caught at write time or during an audit — not halfway through a restore |
-| **Retention Policy** | `find -mtime +7` restricted to `backup-*.tar.gz`, with each archive's `.sha256` deleted in the same loop | Storage stays bounded without ever touching files the script does not own |
-| **Cron Automation** | `--install-cron` copies the script to `/usr/local/sbin`, writes `/etc/cron.d/lab06-backup`, and enables cron | The schedule lives in `/etc/cron.d`, not in someone's shell history, and the cron service is enabled in the same step |
-
-The principle behind all five is the same: a backup is only worth something if you can trust it later. Each safeguard makes a bad archive fail loudly now rather than silently during a restore.
-
-A fatal `tar` error exits non-zero and removes the partial file; the one tolerated exception is exit code 1 (a live log changed mid-read), which is logged and still subjected to the integrity check.
+| **Safe file creation** | The script writes to a `.partial` file first. It renames the file only after the archive passes its checks. | A failed run cannot leave a broken file that looks like a good backup. |
+| **Disk space check** | It measures the source size, adds a 50 MB margin, and checks free space. It stops if space is too low (200 MB minimum). | The backup stops before it fills the disk. |
+| **Integrity check** | It tests the archive with `tar -tzf` before keeping it. It also saves a SHA-256 hash next to each archive. | You can prove the file is readable and has not changed. |
+| **Automatic cleanup** | It deletes `backup-*.tar.gz` files older than 7 days. Their hash files are deleted too. | Old backups do not fill the disk forever. |
+| **Automatic schedule** | `--install-cron` copies the script to `/usr/local/sbin` and adds a daily job at 02:15. | Backups run every day without anyone starting them. |
 
 ## Quick Start
 
@@ -34,18 +30,13 @@ sudo ./backup.sh --dry-run
 sudo ./backup.sh
 ```
 
-Defaults are `/etc` and `/var/log` → `/var/backups/lab06`, 7-day retention, a 200 MB free-space floor, and a daily run at 02:15. Override them with `--sources`, `--dest`, `--retention`, `--min-free`, and `--cron-time`.
+`--dry-run` shows the plan and writes no archive. To run the backup every day, use `sudo ./backup.sh --install-cron`.
 
-It must run as root: it reads `/etc/shadow` and writes to `/var/log` and `/var/backups`.
+By default, archives go to `/var/backups/lab06`, and the log is `/var/log/backup.log`. Use `--dest` to pick another folder.
 
-When the dry run looks right, schedule it:
+## Verification
 
-```bash
-sudo ./backup.sh --install-cron
-# 15 2 * * * root /usr/local/sbin/backup.sh --quiet
-```
-
-## Verification & Evidence
+Run these after a backup:
 
 ```console
 $ sudo ./backup.sh --list
@@ -55,14 +46,13 @@ DATE                       SIZE  ARCHIVE
 1 archive(s) — retention: 7 day(s)
 
 $ sudo ./backup.sh --verify
-[INFO] === backup.sh v1.0.0 — mode: verify ===
 [INFO] verifying archives in /var/backups/lab06
 [OK] SHA-256 valid: backup-20261026-021500.tar.gz
 [INFO] verification complete: 1 archive(s), 0 failure(s)
 ```
 
-## Key Engineering Takeaways
+## Key Takeaways
 
-- **Atomic operations over heroics.** Writing to a `.partial` file and renaming only after validation means the recovery plan is built into the write path, not into someone's memory at 3 a.m.
-- **Verify before you trust.** `tar -tzf` at creation and SHA-256 on demand turn "the backup exists" into "the backup is usable" — the only claim that matters during an incident.
-- **Let the lifecycle run itself.** Retention, logging, and cron are part of the tool, not a wiki page, so storage stays bounded and the schedule survives handovers and busy weeks.
+- **A backup must be complete before you trust it.** The `.partial` file and final rename stop a failed run from looking successful.
+- **A file name is not proof.** `tar -tzf` and SHA-256 show that the archive is readable and unchanged.
+- **Routine work should run itself.** Retention keeps the folder small, and cron keeps backups on schedule.
